@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { middleware } from "./middleware";
 dotenv.config();
 
-const JWT_SECRET=process.env.JWT_SECRET;
+import {JWT_SECRET} from "@repo/backend-common/config";
 const app=express();
 
 app.post("/signin",(req,res)=>{
