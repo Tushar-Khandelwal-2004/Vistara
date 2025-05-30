@@ -5,9 +5,21 @@ import { middleware } from "./middleware";
 dotenv.config();
 
 import {JWT_SECRET} from "@repo/backend-common/config";
+
+import {CreateUserSchema} from "@repo/common/types"
+
+
+
 const app=express();
 
 app.post("/signin",(req,res)=>{
+    const data=CreateUserSchema.safeParse(req.body);
+    if(!data.success){
+        res.json({
+            message:"Incorrect inputs"
+        })
+        return;
+    }
     if(!JWT_SECRET){
         return;
     }
