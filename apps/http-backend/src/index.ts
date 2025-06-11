@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request } from "express";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { middleware } from "./middleware";
@@ -67,45 +67,52 @@ app.post("/signin", async (req, res) => {
 
     const passwordMatch = await bcrypt.compare(parsedData.data.password, user.password);
 
-    if(passwordMatch){
-        const token=jwt.sign({
-            userId:user.id
-        },JWT_SECRET);
+    if (passwordMatch) {
+        const token = jwt.sign({
+            userId: user.id
+        }, JWT_SECRET);
         res.json({
             token
         })
+        return;
     }
-    else{
+    else {
         res.status(411).json({
-            message:"Incorrect credentials"
+            message: "Incorrect credentials"
         })
         return;
     }
-
-
-    const userId = 1
-    const token = jwt.sign({
-        userId
-    }, JWT_SECRET)
-
-    res.json({
-        token
-    })
 })
 
 
-app.post("/room", middleware, (req, res) => {
-    const data = CreateRoomSchema.safeParse(req.body);
-    if (!data.success) {
+app.post("/room", middleware, async (req, res) => {
+    const parsedDdata = CreateRoomSchema.safeParse(req.body);
+    if (!parsedDdata.success) {
         res.json({
             message: "Incorrect inputs"
         })
         return;
     }
-    // Database call
-    res.status(200).json({
-        roomId: "123"
-    })
+
+    const userId = (req as Request & { userId: string }).userId;
+
+    try {
+        const room = await prismaClient.room.create({
+            data: {
+                slug: parsedDdata.data.name,
+                adminId: userId
+            }
+        })
+
+        res.status(200).json({
+            roomId: room.id
+        })
+    }catch(e){
+        res.status(411).json({
+            message:"Name must be unique"
+        })
+    }
+    return;
 })
 
 
