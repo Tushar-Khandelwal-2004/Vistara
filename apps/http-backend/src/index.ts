@@ -10,6 +10,36 @@ import { prismaClient } from "@repo/db/client"
 
 
 const app = express();
+app.use(express.json());
+app.post("/signup", async (req, res) => {
+    const parsedData = CreateUserSchema.safeParse(req.body);
+    console.log(parsedData)
+    if (!parsedData.success) {
+        res.json({
+            message: "Incorrect inputs"
+        })
+        return;
+    }
+    try{
+        await prismaClient.user.create({
+            data:{
+                email:parsedData.data.username,
+                password:parsedData.data.password,
+                name:parsedData.data.name
+            }
+        })
+    }
+    catch(e){
+        res.json(411).json({
+            message:"Email already in use"
+        })
+        return;
+    }
+    res.json({
+        userId: "123"
+    })
+})
+
 
 app.post("/signin", (req, res) => {
     const data = SigninSchema.safeParse(req.body);
@@ -32,19 +62,6 @@ app.post("/signin", (req, res) => {
     })
 })
 
-app.post("/signup", (req, res) => {
-    const data = CreateUserSchema.safeParse(req.body);
-    if (!data.success) {
-        res.json({
-            message: "Incorrect inputs"
-        })
-        return;
-    }
-    //db call
-    res.json({
-        userId: "123"
-    })
-})
 
 app.post("/room", middleware, (req, res) => {
     const data = CreateRoomSchema.safeParse(req.body);
