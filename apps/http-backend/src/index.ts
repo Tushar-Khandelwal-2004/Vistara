@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { middleware } from "./middleware";
 dotenv.config();
 import { JWT_SECRET } from "@repo/backend-common/config";
-
+import bcrypt from "bcrypt"
 import { CreateUserSchema, SigninSchema, CreateRoomSchema } from "@repo/common/types"
 import { prismaClient } from "@repo/db/client"
 
@@ -20,38 +20,69 @@ app.post("/signup", async (req, res) => {
         })
         return;
     }
-    try{
-        await prismaClient.user.create({
-            data:{
-                email:parsedData.data.username,
-                password:parsedData.data.password,
-                name:parsedData.data.name
+    const hashedPassword = await bcrypt.hash(parsedData.data.password, 5);
+    try {
+        const user = await prismaClient.user.create({
+            data: {
+                email: parsedData.data.username,
+                password: hashedPassword,
+                name: parsedData.data.name
             }
         })
-    }
-    catch(e){
-        res.json(411).json({
-            message:"Email already in use"
+        res.json({
+            userId: user.id
         })
         return;
     }
-    res.json({
-        userId: "123"
-    })
+    catch (e) {
+        res.status(411).json({
+            message: "Email already in use"
+        })
+        return;
+    }
+
 })
 
 
-app.post("/signin", (req, res) => {
-    const data = SigninSchema.safeParse(req.body);
-    if (!data.success) {
+app.post("/signin", async (req, res) => {
+    const parsedData = SigninSchema.safeParse(req.body);
+    if (!parsedData.success) {
         res.json({
             message: "Incorrect inputs"
         })
         return;
     }
-    if (!JWT_SECRET) {
+
+    const user = await prismaClient.user.findFirst({
+        where: {
+            email: parsedData.data.username
+        }
+    })
+    if (!user || !JWT_SECRET || !user.password) {
+        res.status(411).json({
+            message: "User does not exist"
+        });
         return;
     }
+
+    const passwordMatch = await bcrypt.compare(parsedData.data.password, user.password);
+
+    if(passwordMatch){
+        const token=jwt.sign({
+            userId:user.id
+        },JWT_SECRET);
+        res.json({
+            token
+        })
+    }
+    else{
+        res.status(411).json({
+            message:"Incorrect credentials"
+        })
+        return;
+    }
+
+
     const userId = 1
     const token = jwt.sign({
         userId
