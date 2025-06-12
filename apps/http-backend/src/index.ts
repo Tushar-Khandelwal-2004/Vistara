@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 app.post("/signup", async (req, res) => {
     const parsedData = CreateUserSchema.safeParse(req.body);
-    
+
     if (!parsedData.success) {
         res.json({
             message: "Incorrect inputs"
@@ -107,13 +107,28 @@ app.post("/room", middleware, async (req, res) => {
         res.status(200).json({
             roomId: room.id
         })
-    }catch(e){
+    } catch (e) {
         res.status(411).json({
-            message:"Name must be unique"
+            message: "Name must be unique"
         })
     }
     return;
 })
 
+app.get("/chats/:roomId", async (req, res) => {
+    const roomId = Number(req.params.roomId);
+    const messages = await prismaClient.chat.findMany({
+        where: {
+            roomId: roomId
+        },
+        orderBy: {
+            id: "desc"
+        },
+        take: 50
+    })
+    res.json({
+        messages
+    })
+})
 
 app.listen(3001);
