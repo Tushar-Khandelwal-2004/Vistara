@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 app.post("/signup", async (req, res) => {
     const parsedData = CreateUserSchema.safeParse(req.body);
-    console.log(parsedData)
+    
     if (!parsedData.success) {
         res.json({
             message: "Incorrect inputs"
@@ -86,8 +86,8 @@ app.post("/signin", async (req, res) => {
 
 
 app.post("/room", middleware, async (req, res) => {
-    const parsedDdata = CreateRoomSchema.safeParse(req.body);
-    if (!parsedDdata.success) {
+    const parsedData = CreateRoomSchema.safeParse(req.body);
+    if (!parsedData.success) {
         res.json({
             message: "Incorrect inputs"
         })
@@ -99,7 +99,7 @@ app.post("/room", middleware, async (req, res) => {
     try {
         const room = await prismaClient.room.create({
             data: {
-                slug: parsedDdata.data.name,
+                slug: parsedData.data.name,
                 adminId: userId
             }
         })
