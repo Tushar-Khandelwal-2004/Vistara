@@ -7,9 +7,11 @@ import { JWT_SECRET } from "@repo/backend-common/config";
 import bcrypt from "bcrypt"
 import { CreateUserSchema, SigninSchema, CreateRoomSchema } from "@repo/common/types"
 import { prismaClient } from "@repo/db/client"
-
+import cors from "cors";
 
 const app = express();
+app.use(cors());
+
 app.use(express.json());
 app.post("/signup", async (req, res) => {
     const parsedData = CreateUserSchema.safeParse(req.body);
@@ -132,7 +134,7 @@ app.get("/chats/:roomId", async (req, res) => {
         })
     } catch (e) {
         res.json({
-            messages:[]
+            messages: []
         })
     }
 })
