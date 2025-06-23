@@ -21,6 +21,7 @@ export default function Signin() {
             console.log("res.data", res.data);
             if (res.data.token) {
                 alert(res.data.token)
+                localStorage.setItem("token",res.data.token);
             }
 
         } catch (err: any) {
