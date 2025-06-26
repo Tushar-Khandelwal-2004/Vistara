@@ -1,4 +1,5 @@
 import { initDraw } from "@/draw";
+import useSize from "@/hooks/useSize";
 import { useEffect, useRef } from "react";
 
 export function Canvas({
@@ -9,7 +10,7 @@ export function Canvas({
     socket:WebSocket
 }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-
+    const windowSize=useSize();
     useEffect(() => {
 
         if (canvasRef.current) {
@@ -22,7 +23,7 @@ export function Canvas({
     }, [canvasRef])
     return (
         <div>
-            <canvas ref={canvasRef} width={500} height={500}></canvas>
+            <canvas ref={canvasRef} width={windowSize[0]} height={windowSize[1]}></canvas>
         </div>
     )
 }
