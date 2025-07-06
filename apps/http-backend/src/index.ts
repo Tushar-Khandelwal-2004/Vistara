@@ -13,7 +13,7 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
-app.post("/signup", async (req, res) => {
+app.post("/signup", async (req, res) => {  // // user signup
     const parsedData = CreateUserSchema.safeParse(req.body);
 
     if (!parsedData.success) {
@@ -46,7 +46,7 @@ app.post("/signup", async (req, res) => {
 })
 
 
-app.post("/signin", async (req, res) => {
+app.post("/signin", async (req, res) => { // user signin
     const parsedData = SigninSchema.safeParse(req.body);
     if (!parsedData.success) {
         res.json({
@@ -87,7 +87,7 @@ app.post("/signin", async (req, res) => {
 })
 
 
-app.post("/room", middleware, async (req, res) => {
+app.post("/room", middleware, async (req, res) => {  // Create a room
     const parsedData = CreateRoomSchema.safeParse(req.body);
     if (!parsedData.success) {
         res.json({
@@ -117,7 +117,7 @@ app.post("/room", middleware, async (req, res) => {
     return;
 })
 
-app.get("/chats/:roomId", async (req, res) => {
+app.get("/chats/:roomId", async (req, res) => { // returns previous chats
     try {
         const roomId = Number(req.params.roomId);
         const messages = await prismaClient.chat.findMany({
@@ -139,7 +139,7 @@ app.get("/chats/:roomId", async (req, res) => {
     }
 })
 
-app.get("/room/:slug", async (req, res) => {
+app.get("/room/:slug", async (req, res) => {  // returns room id corresponding to the slug
     const slug = req.params.slug;
     const room = await prismaClient.room.findFirst({
         where: {
@@ -151,7 +151,7 @@ app.get("/room/:slug", async (req, res) => {
     })
 })
 
-app.get("/me", async (req, res) => {
+app.get("/me", async (req, res) => {  // checks for token
     const token = req.headers["authorization"] ?? "";
     try {
         const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
@@ -174,13 +174,49 @@ app.get("/me", async (req, res) => {
         }
         res.status(200).send({
             success: true,
-            userId:user.id
+            userId: user.id
         })
     } catch (e) {
         res.status(401).send({
             success: false
         })
         return;
+    }
+})
+
+app.get("/roomlist", async (req, res) => { // returns the room created by user
+    const token = req.headers["authorization"] ?? "";
+    if (!token) {
+        res.status(401).send({
+            success: false,
+            message: "Token not provided"
+        })
+        return;
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+        if (!decoded || !decoded.userId) {
+            res.status(401).send({
+                success: false
+            })
+            return;
+        }
+        const userId=decoded.userId;
+        const rooms=await prismaClient.room.findMany({
+            where:{
+                adminId:userId
+            }
+        });
+        res.status(200).send({
+            success:true,
+            rooms
+        })
+    } catch (e) {
+        res.status(403).send({
+            success:false,
+            message:"Error"
+        })
     }
 })
 
