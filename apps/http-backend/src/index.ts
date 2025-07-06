@@ -1,5 +1,5 @@
 import express, { Request } from "express";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import dotenv from "dotenv";
 import { middleware } from "./middleware";
 dotenv.config();
@@ -127,7 +127,7 @@ app.get("/chats/:roomId", async (req, res) => {
             orderBy: {
                 id: "desc"
             },
-            take: 50
+            take: 1000
         })
         res.json({
             messages
@@ -149,6 +149,39 @@ app.get("/room/:slug", async (req, res) => {
     res.json({
         room
     })
+})
+
+app.get("/me", async (req, res) => {
+    const token = req.headers["authorization"] ?? "";
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+        if (!decoded.userId) {
+            res.status(401).send({
+                success: false
+            })
+            return;
+        }
+        const user = await prismaClient.user.findFirst({
+            where: {
+                id: decoded.userId
+            }
+        })
+        if (!user) {
+            res.status(401).send({
+                success: false
+            })
+            return;
+        }
+        res.status(200).send({
+            success: true,
+            userId:user.id
+        })
+    } catch (e) {
+        res.status(401).send({
+            success: false
+        })
+        return;
+    }
 })
 
 app.listen(3001);
