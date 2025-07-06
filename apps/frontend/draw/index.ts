@@ -62,8 +62,9 @@ export async function initDraw(canvas: HTMLCanvasElement, roomId: string, socket
         const height = e.clientY - startY
         //@ts-ignore
         const selectedTool = window.selectedTool;
+        let shape: Shape | null = null;
         if (selectedTool === "rect" || selectedTool === "circle") {
-            const shape: Shape = {
+            shape = {
                 type: selectedTool,
                 x: startX,
                 y: startY,
@@ -71,27 +72,24 @@ export async function initDraw(canvas: HTMLCanvasElement, roomId: string, socket
                 height: height
 
             };
-            existingShapes.push(shape)
 
-            socket.send(JSON.stringify({
-                type: "chat",
-                message: JSON.stringify({ shape }),
-                roomId: roomId
-            }))
         }
         else if (selectedTool === "pencil") {
-            const shape: Shape = {
+            shape = {
                 type: "pencil",
                 points: currentPencilPath
             };
-            existingShapes.push(shape);
-            socket.send(JSON.stringify({
-                type: "chat",
-                message: JSON.stringify({ shape }),
-                roomId: roomId
-            }));
             currentPencilPath = [];
         }
+        if (!shape) {
+            return;
+        }
+        existingShapes.push(shape);
+        socket.send(JSON.stringify({
+            type: "chat",
+            message: JSON.stringify({ shape }),
+            roomId: roomId
+        }));
     })
 
     canvas.addEventListener("mousemove", (e) => {
@@ -157,44 +155,6 @@ export async function initDraw(canvas: HTMLCanvasElement, roomId: string, socket
     })
 
 }
-
-// function clearCanvas(existingShapes: Shape[], canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
-//     ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-//     existingShapes.map((shape) => {
-//         ctx.strokeStyle = "black";
-//         if (shape.type === "rect") {
-//             const width = shape.width;
-//             const height = shape.height;
-
-//             const absWidth = Math.abs(width);
-//             const absHeight = Math.abs(height);
-
-//             const centerX = shape.x + width / 2;
-//             const centerY = shape.y + height / 2;
-//             ctx.strokeRect(
-//                 width < 0 ? e.clientX : startX,
-//                 height < 0 ? e.clientY : startY,
-//                 absWidth,
-//                 absHeight
-//             );
-//         } else if (shape.type === "circle") {
-//             const width = shape.width;
-//             const height = shape.height;
-
-//             const absWidth = Math.abs(width);
-//             const absHeight = Math.abs(height);
-
-//             const centerX = shape.x + width / 2;
-//             const centerY = shape.y + height / 2;
-//             ctx.beginPath();
-//             ctx.ellipse(centerX, centerY, absWidth / 2, absHeight / 2, 0, 0, 2 * Math.PI);
-//             ctx.stroke();
-//         } else if (shape.type === "pencil") {
-//             // Pencil logic...
-//         }
-//     })
-// }
 
 function clearCanvas(existingShapes: Shape[], canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
