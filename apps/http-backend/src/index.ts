@@ -140,7 +140,8 @@ app.get("/chats/:roomId", async (req, res) => { // returns previous chats
 })
 
 app.get("/room/:slug", async (req, res) => {  // returns room id corresponding to the slug
-    const slug = req.params.slug;
+    try{
+        const slug = req.params.slug;
     const room = await prismaClient.room.findFirst({
         where: {
             slug
@@ -149,6 +150,13 @@ app.get("/room/:slug", async (req, res) => {  // returns room id corresponding t
     res.json({
         room
     })
+    }catch(e){
+        res.status(402).send({
+            success:false,
+            message:"Room does not exists."
+        })
+    }
+
 })
 
 app.get("/me", async (req, res) => {  // checks for token
@@ -219,5 +227,7 @@ app.get("/roomlist", async (req, res) => { // returns the room created by user
         })
     }
 })
+
+
 
 app.listen(3001);
