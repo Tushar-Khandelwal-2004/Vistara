@@ -39,9 +39,10 @@ export class Game {
     private lastPanY = 0;
 
     private cleanupKeyboardZoom?: () => void;
+    private onZoomChange?: (zoom: number) => void;
 
 
-    constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
+    constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket, onZoomChange?: (zoom: number) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d")!;
         this.roomId = roomId;
@@ -49,6 +50,7 @@ export class Game {
         this.socket = socket;
         this.clicked = false;
         this.currentPencilPath = [];
+        this.onZoomChange = onZoomChange
         this.init();
         this.initHandlers();
         this.initMouseHandlers();
@@ -239,18 +241,20 @@ export class Game {
         const worldX = (mouseX - this.offsetX) / this.scale;
         const worldY = (mouseY - this.offsetY) / this.scale;
 
-        const newScale = this.scale * factor;
-        const MIN_SCALE = 0.2;
-        const MAX_SCALE = 10;
+        let newScale = this.scale * factor;
+        const MIN_SCALE = 0.5;
+        const MAX_SCALE = 4.0;
 
-        if (newScale < MIN_SCALE || newScale > MAX_SCALE) return;
-
+        if (newScale < MIN_SCALE) newScale = MIN_SCALE;
+        if (newScale > MAX_SCALE) newScale = MAX_SCALE;
         this.scale = newScale;
 
         this.offsetX = mouseX - worldX * this.scale;
         this.offsetY = mouseY - worldY * this.scale;
 
         this.clearCanvas();
+        this.onZoomChange?.(this.scale);
+
     };
 
     resetZoom() {
@@ -266,6 +270,8 @@ export class Game {
         this.offsetY = canvasCenterY - worldY * this.scale;
 
         this.clearCanvas();
+        this.onZoomChange?.(this.scale);
+
     }
 
     initMouseHandlers() {
@@ -276,44 +282,111 @@ export class Game {
     }
 
     initKeyboardZoom() {
-    const keyHandler = (e: KeyboardEvent) => {
-        if (e.ctrlKey && (e.key === "=" || e.key === "+" || e.key === "-")) {
-            e.preventDefault();
+        const keyHandler = (e: KeyboardEvent) => {
+            if (e.ctrlKey && (e.key === "=" || e.key === "+" || e.key === "-")) {
+                e.preventDefault();
 
-            const zoomFactor = 1.1;
-            let factor = 1;
+                const zoomFactor = 1.1;
+                let factor = 1;
 
-            if (e.key === "=" || e.key === "+") {
-                factor = zoomFactor;
-            } else if (e.key === "-") {
-                factor = 1 / zoomFactor;
+                if (e.key === "=" || e.key === "+") {
+                    factor = zoomFactor;
+                } else if (e.key === "-") {
+                    factor = 1 / zoomFactor;
+                }
+
+                const canvasCenterX = this.canvas.width / 2;
+                const canvasCenterY = this.canvas.height / 2;
+
+                const worldX = (canvasCenterX - this.offsetX) / this.scale;
+                const worldY = (canvasCenterY - this.offsetY) / this.scale;
+
+                let newScale = this.scale * factor;
+                const MIN_SCALE = 0.5;
+                const MAX_SCALE = 4.0;
+
+                if (newScale < MIN_SCALE) newScale = MIN_SCALE;
+                if (newScale > MAX_SCALE) newScale = MAX_SCALE;
+
+                this.scale = newScale;
+                this.offsetX = canvasCenterX - worldX * this.scale;
+                this.offsetY = canvasCenterY - worldY * this.scale;
+
+                this.clearCanvas();
             }
+        };
 
-            const canvasCenterX = this.canvas.width / 2;
-            const canvasCenterY = this.canvas.height / 2;
+        window.addEventListener("keydown", keyHandler);
 
-            const worldX = (canvasCenterX - this.offsetX) / this.scale;
-            const worldY = (canvasCenterY - this.offsetY) / this.scale;
+        return () => {
+            window.removeEventListener("keydown", keyHandler);
+        };
+    }
 
-            const newScale = this.scale * factor;
-            const MIN_SCALE = 0.2;
-            const MAX_SCALE = 10;
+    zoomIn() {
+        this.applyZoom(1.1);
+    }
 
-            if (newScale < MIN_SCALE || newScale > MAX_SCALE) return;
+    zoomOut() {
+        this.applyZoom(1 / 1.1);
+    }
 
-            this.scale = newScale;
-            this.offsetX = canvasCenterX - worldX * this.scale;
-            this.offsetY = canvasCenterY - worldY * this.scale;
+    applyZoom(factor: number) {
+        const canvasCenterX = this.canvas.width / 2;
+        const canvasCenterY = this.canvas.height / 2;
 
-            this.clearCanvas();
+        const worldX = (canvasCenterX - this.offsetX) / this.scale;
+        const worldY = (canvasCenterY - this.offsetY) / this.scale;
+
+        let newScale = this.scale * factor;
+        const MIN_SCALE = 0.5;
+        const MAX_SCALE = 4;
+
+        newScale = Math.min(Math.max(newScale, MIN_SCALE), MAX_SCALE);
+
+        this.scale = newScale;
+        this.offsetX = canvasCenterX - worldX * this.scale;
+        this.offsetY = canvasCenterY - worldY * this.scale;
+
+        this.clearCanvas();
+        this.onZoomChange?.(this.scale);
+    }
+
+    getScale() { return this.scale; }
+    getOffset() { return { x: this.offsetX, y: this.offsetY }; }
+    getShapes() { return this.existingShapes; }
+
+    getDrawnBounds() {
+        if (this.existingShapes.length === 0) {
+            return null;
         }
-    };
 
-    window.addEventListener("keydown", keyHandler);
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-    return () => {
-        window.removeEventListener("keydown", keyHandler);
-    };
-}
+        for (const shape of this.existingShapes) {
+            if (shape.type === "rect" || shape.type === "circle") {
+                const x1 = Math.min(shape.x, shape.x + shape.width);
+                const y1 = Math.min(shape.y, shape.y + shape.height);
+                const x2 = Math.max(shape.x, shape.x + shape.width);
+                const y2 = Math.max(shape.y, shape.y + shape.height);
+                minX = Math.min(minX, x1);
+                minY = Math.min(minY, y1);
+                maxX = Math.max(maxX, x2);
+                maxY = Math.max(maxY, y2);
+            } else if (shape.type === "pencil") {
+                for (const point of shape.points) {
+                    minX = Math.min(minX, point.x);
+                    minY = Math.min(minY, point.y);
+                    maxX = Math.max(maxX, point.x);
+                    maxY = Math.max(maxY, point.y);
+                }
+            }
+        }
+
+        return { minX, minY, maxX, maxY };
+    }
+
+
+
 
 }

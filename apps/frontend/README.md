@@ -1,6 +1,5 @@
 ## Next tasks->
-
-Zoom indicator
+Shapes behind Topbar
 Stroke color
 More shapes
 Undo/Redo
@@ -16,3 +15,6 @@ Panning -> done  -> Alt+right key + Hand in TopBar
 Fix slug-Id in /canvas/roomid
 
 Zooming // level shower , ctrl + -
+
+Zoom indicator
+
