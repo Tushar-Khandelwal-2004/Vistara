@@ -28,6 +28,12 @@ type Shape = {
     startY: number;
     endX: number;
     endY: number;
+} | {
+    type: "diamond";
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 };
 
 export class Game {
@@ -135,6 +141,10 @@ export class Game {
             else if (shape.type === "arrow") {
                 this.drawArrow(shape.startX, shape.startY, shape.endX, shape.endY);
             }
+            else if (shape.type === "diamond") {
+                this.drawDiamond(shape.x, shape.y, shape.width, shape.height);
+            }
+
 
         });
     }
@@ -214,6 +224,16 @@ export class Game {
                 endY: y
             };
         }
+        else if (this.selectedTool === "diamond") {
+            shape = {
+                type: "diamond",
+                x: this.startX,
+                y: this.startY,
+                width,
+                height
+            };
+        }
+
 
 
 
@@ -253,9 +273,11 @@ export class Game {
 
         this.clearCanvas();
 
+        const width = x - this.startX;
+        const height = y - this.startY;
+
         if (this.selectedTool === "rect") {
-            const width = x - this.startX;
-            const height = y - this.startY;
+
             this.ctx.strokeRect(
                 width < 0 ? x : this.startX,
                 height < 0 ? y : this.startY,
@@ -263,8 +285,7 @@ export class Game {
                 Math.abs(height)
             );
         } else if (this.selectedTool === "circle") {
-            const width = x - this.startX;
-            const height = y - this.startY;
+
             const centerX = this.startX + width / 2;
             const centerY = this.startY + height / 2;
             this.ctx.beginPath();
@@ -288,6 +309,10 @@ export class Game {
         else if (this.selectedTool === "arrow") {
             this.drawArrow(this.startX, this.startY, x, y);
         }
+        else if (this.selectedTool === "diamond") {
+            this.drawDiamond(this.startX, this.startY, width, height);
+        }
+
 
 
     };
@@ -417,6 +442,17 @@ export class Game {
                 maxX = Math.max(maxX, shape.startX, shape.endX);
                 maxY = Math.max(maxY, shape.startY, shape.endY);
             }
+            else if (shape.type === "diamond") {
+                const x1 = Math.min(shape.x, shape.x + shape.width);
+                const y1 = Math.min(shape.y, shape.y + shape.height);
+                const x2 = Math.max(shape.x, shape.x + shape.width);
+                const y2 = Math.max(shape.y, shape.y + shape.height);
+                minX = Math.min(minX, x1);
+                minY = Math.min(minY, y1);
+                maxX = Math.max(maxX, x2);
+                maxY = Math.max(maxY, y2);
+            }
+
 
 
         }
@@ -450,5 +486,18 @@ export class Game {
         this.ctx.fillStyle = this.ctx.strokeStyle;
         this.ctx.fill();
     }
+    private drawDiamond(x: number, y: number, width: number, height: number) {
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX, y);
+        this.ctx.lineTo(x + width, centerY);
+        this.ctx.lineTo(centerX, y + height);
+        this.ctx.lineTo(x, centerY);
+        this.ctx.closePath();
+        this.ctx.stroke();
+    }
+
 
 }

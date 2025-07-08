@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "./IconButton";
-import { ArrowUpRightIcon, CircleIcon, HandIcon, PencilIcon, RectangleHorizontalIcon, SlashIcon } from "lucide-react";
+import { ArrowUpRightIcon, CircleIcon, DiamondIcon, HandIcon, PencilIcon, RectangleHorizontalIcon, SlashIcon } from "lucide-react";
 import { Game } from "@/draw/Game";
 import useSize from "@/hooks/useSize";
 import ZoomPanel from "./ZoomPanel";
 
-export type Tool = "circle" | "rect" | "pencil" | "hand" | "line" | "arrow";
+export type Tool = "circle" | "rect" | "pencil" | "hand" | "line" | "arrow" | "diamond";
 
 export function Canvas({
     roomId,
@@ -83,7 +83,6 @@ export function TopBar({
             <IconButton activated={selectedTool === "pencil"} icon={<PencilIcon />} onclick={() => setSelectedTool("pencil")} />
             <IconButton activated={selectedTool === "rect"} icon={<RectangleHorizontalIcon />} onclick={() => setSelectedTool("rect")} />
             <IconButton activated={selectedTool === "circle"} icon={<CircleIcon />} onclick={() => setSelectedTool("circle")} />
-            <IconButton activated={selectedTool === "hand"} icon={<HandIcon />} onclick={() => { setSelectedTool("hand") }} />
             <IconButton
                 activated={selectedTool === "line"}
                 icon={<SlashIcon />}
@@ -91,10 +90,17 @@ export function TopBar({
             />
             <IconButton
                 activated={selectedTool === "arrow"}
-                icon={<ArrowUpRightIcon />} 
+                icon={<ArrowUpRightIcon />}
                 onclick={() => setSelectedTool("arrow")}
             />
+            <IconButton
+                activated={selectedTool === "diamond"}
+                icon={<DiamondIcon />}
+                onclick={() => setSelectedTool("diamond")}
+            />
 
+
+            <IconButton activated={selectedTool === "hand"} icon={<HandIcon />} onclick={() => { setSelectedTool("hand") }} />
 
             <button
                 className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
