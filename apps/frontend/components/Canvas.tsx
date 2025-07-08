@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "./IconButton";
-import { CircleIcon, HandIcon, PencilIcon, RectangleHorizontalIcon } from "lucide-react";
+import { CircleIcon, HandIcon, PencilIcon, RectangleHorizontalIcon, SlashIcon } from "lucide-react";
 import { Game } from "@/draw/Game";
 import useSize from "@/hooks/useSize";
 import ZoomPanel from "./ZoomPanel";
 
-export type Tool = "circle" | "rect" | "pencil" | "hand";
+export type Tool = "circle" | "rect" | "pencil" | "hand" | "line";
 
 export function Canvas({
     roomId,
@@ -84,6 +84,12 @@ export function TopBar({
             <IconButton activated={selectedTool === "rect"} icon={<RectangleHorizontalIcon />} onclick={() => setSelectedTool("rect")} />
             <IconButton activated={selectedTool === "circle"} icon={<CircleIcon />} onclick={() => setSelectedTool("circle")} />
             <IconButton activated={selectedTool === "hand"} icon={<HandIcon />} onclick={() => { setSelectedTool("hand") }} />
+            <IconButton
+                activated={selectedTool === "line"}
+                icon={<SlashIcon />} // or any icon
+                onclick={() => setSelectedTool("line")}
+            />
+
             <button
                 className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
                 onClick={() => { game?.resetZoom?.() }}

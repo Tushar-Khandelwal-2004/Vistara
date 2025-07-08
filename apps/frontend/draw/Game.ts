@@ -16,6 +16,12 @@ type Shape = {
 } | {
     type: "pencil",
     points: { x: number; y: number }[]
+} | {
+    type: "line";
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
 };
 
 export class Game {
@@ -114,6 +120,12 @@ export class Game {
                 }
                 this.ctx.stroke();
             }
+            else if (shape.type === "line") {
+                this.ctx.beginPath();
+                this.ctx.moveTo(shape.startX, shape.startY);
+                this.ctx.lineTo(shape.endX, shape.endY);
+                this.ctx.stroke();
+            }
         });
     }
 
@@ -174,6 +186,17 @@ export class Game {
             };
             this.currentPencilPath = [];
         }
+        else if (this.selectedTool === "line") {
+            shape = {
+                type: "line",
+                startX: this.startX,
+                startY: this.startY,
+                endX: x,
+                endY: y
+            };
+        }
+
+
 
         if (!shape) return;
 
@@ -236,6 +259,13 @@ export class Game {
             }
             this.ctx.stroke();
         }
+        else if (this.selectedTool === "line") {
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.startX, this.startY);
+            this.ctx.lineTo(x, y);
+            this.ctx.stroke();
+        }
+
     };
 
     handleZoom = (e: WheelEvent) => {
@@ -351,6 +381,13 @@ export class Game {
                     maxY = Math.max(maxY, point.y);
                 }
             }
+            else if (shape.type === "line") {
+                minX = Math.min(minX, shape.startX, shape.endX);
+                minY = Math.min(minY, shape.startY, shape.endY);
+                maxX = Math.max(maxX, shape.startX, shape.endX);
+                maxY = Math.max(maxY, shape.startY, shape.endY);
+            }
+
         }
 
         return { minX, minY, maxX, maxY };
