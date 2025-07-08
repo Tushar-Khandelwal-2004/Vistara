@@ -22,6 +22,12 @@ type Shape = {
     startY: number;
     endX: number;
     endY: number;
+} | {
+    type: "arrow";
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
 };
 
 export class Game {
@@ -126,6 +132,10 @@ export class Game {
                 this.ctx.lineTo(shape.endX, shape.endY);
                 this.ctx.stroke();
             }
+            else if (shape.type === "arrow") {
+                this.drawArrow(shape.startX, shape.startY, shape.endX, shape.endY);
+            }
+
         });
     }
 
@@ -195,6 +205,16 @@ export class Game {
                 endY: y
             };
         }
+        else if (this.selectedTool === "arrow") {
+            shape = {
+                type: "arrow",
+                startX: this.startX,
+                startY: this.startY,
+                endX: x,
+                endY: y
+            };
+        }
+
 
 
 
@@ -265,6 +285,10 @@ export class Game {
             this.ctx.lineTo(x, y);
             this.ctx.stroke();
         }
+        else if (this.selectedTool === "arrow") {
+            this.drawArrow(this.startX, this.startY, x, y);
+        }
+
 
     };
 
@@ -387,9 +411,44 @@ export class Game {
                 maxX = Math.max(maxX, shape.startX, shape.endX);
                 maxY = Math.max(maxY, shape.startY, shape.endY);
             }
+            else if (shape.type === "arrow") {
+                minX = Math.min(minX, shape.startX, shape.endX);
+                minY = Math.min(minY, shape.startY, shape.endY);
+                maxX = Math.max(maxX, shape.startX, shape.endX);
+                maxY = Math.max(maxY, shape.startY, shape.endY);
+            }
+
 
         }
 
         return { minX, minY, maxX, maxY };
     }
+
+    private drawArrow(fromX: number, fromY: number, toX: number, toY: number) {
+        const headLength = 10;
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const angle = Math.atan2(dy, dx);
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(fromX, fromY);
+        this.ctx.lineTo(toX, toY);
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(toX, toY);
+        this.ctx.lineTo(
+            toX - headLength * Math.cos(angle - Math.PI / 6),
+            toY - headLength * Math.sin(angle - Math.PI / 6)
+        );
+        this.ctx.lineTo(
+            toX - headLength * Math.cos(angle + Math.PI / 6),
+            toY - headLength * Math.sin(angle + Math.PI / 6)
+        );
+        this.ctx.lineTo(toX, toY);
+        this.ctx.closePath();
+        this.ctx.fillStyle = this.ctx.strokeStyle;
+        this.ctx.fill();
+    }
+
 }
