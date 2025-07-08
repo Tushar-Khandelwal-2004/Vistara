@@ -41,7 +41,6 @@ export class Game {
     private cleanupKeyboardZoom?: () => void;
     private onZoomChange?: (zoom: number) => void;
 
-
     constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket, onZoomChange?: (zoom: number) => void) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d")!;
@@ -50,29 +49,25 @@ export class Game {
         this.socket = socket;
         this.clicked = false;
         this.currentPencilPath = [];
-        this.onZoomChange = onZoomChange
+        this.onZoomChange = onZoomChange;
+
         this.init();
         this.initHandlers();
         this.initMouseHandlers();
         this.cleanupKeyboardZoom = this.initKeyboardZoom();
-
     }
 
     destroy() {
-        this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
-        this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
-        this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
+        window.removeEventListener("mousedown", this.mouseDownHandler);
+        window.removeEventListener("mouseup", this.mouseUpHandler);
+        window.removeEventListener("mousemove", this.mouseMoveHandler);
         this.canvas.removeEventListener("wheel", this.handleZoom);
         this.cleanupKeyboardZoom?.();
     }
 
     setTool(tool: Tool) {
         this.selectedTool = tool;
-        if (tool === "hand") {
-            this.canvas.style.cursor = "grab";
-        } else {
-            this.canvas.style.cursor = "crosshair";
-        }
+        this.canvas.style.cursor = tool === "hand" ? "grab" : "crosshair";
     }
 
     async init() {
@@ -123,6 +118,10 @@ export class Game {
     }
 
     mouseDownHandler = (e: MouseEvent) => {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - this.offsetX) / this.scale;
+        const y = (e.clientY - rect.top - this.offsetY) / this.scale;
+
         if (this.selectedTool === "hand") {
             this.isPanning = true;
             this.lastPanX = e.clientX;
@@ -132,11 +131,11 @@ export class Game {
         }
 
         this.clicked = true;
-        this.startX = (e.clientX - this.offsetX) / this.scale;
-        this.startY = (e.clientY - this.offsetY) / this.scale;
+        this.startX = x;
+        this.startY = y;
 
         if (this.selectedTool === "pencil") {
-            this.currentPencilPath = [{ x: this.startX, y: this.startY }];
+            this.currentPencilPath = [{ x, y }];
         }
     };
 
@@ -147,11 +146,16 @@ export class Game {
             return;
         }
 
+        if (!this.clicked) return;
+
         this.clicked = false;
-        const endX = (e.clientX - this.offsetX) / this.scale;
-        const endY = (e.clientY - this.offsetY) / this.scale;
-        const width = endX - this.startX;
-        const height = endY - this.startY;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - this.offsetX) / this.scale;
+        const y = (e.clientY - rect.top - this.offsetY) / this.scale;
+
+        const width = x - this.startX;
+        const height = y - this.startY;
 
         let shape: Shape | null = null;
 
@@ -184,6 +188,13 @@ export class Game {
     };
 
     mouseMoveHandler = (e: MouseEvent) => {
+        const rect = this.canvas.getBoundingClientRect();
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
+
+        const x = (canvasX - this.offsetX) / this.scale;
+        const y = (canvasY - this.offsetY) / this.scale;
+
         if (this.selectedTool === "hand" && this.isPanning) {
             const dx = e.clientX - this.lastPanX;
             const dy = e.clientY - this.lastPanY;
@@ -197,28 +208,27 @@ export class Game {
 
         if (!this.clicked) return;
 
-        const currX = (e.clientX - this.offsetX) / this.scale;
-        const currY = (e.clientY - this.offsetY) / this.scale;
-        const width = currX - this.startX;
-        const height = currY - this.startY;
-
         this.clearCanvas();
 
         if (this.selectedTool === "rect") {
+            const width = x - this.startX;
+            const height = y - this.startY;
             this.ctx.strokeRect(
-                width < 0 ? currX : this.startX,
-                height < 0 ? currY : this.startY,
+                width < 0 ? x : this.startX,
+                height < 0 ? y : this.startY,
                 Math.abs(width),
                 Math.abs(height)
             );
         } else if (this.selectedTool === "circle") {
+            const width = x - this.startX;
+            const height = y - this.startY;
             const centerX = this.startX + width / 2;
             const centerY = this.startY + height / 2;
             this.ctx.beginPath();
             this.ctx.ellipse(centerX, centerY, Math.abs(width) / 2, Math.abs(height) / 2, 0, 0, 2 * Math.PI);
             this.ctx.stroke();
         } else if (this.selectedTool === "pencil") {
-            this.currentPencilPath.push({ x: currX, y: currY });
+            this.currentPencilPath.push({ x, y });
             this.ctx.beginPath();
             this.ctx.moveTo(this.currentPencilPath[0].x, this.currentPencilPath[0].y);
             for (let i = 1; i < this.currentPencilPath.length; i++) {
@@ -242,19 +252,14 @@ export class Game {
         const worldY = (mouseY - this.offsetY) / this.scale;
 
         let newScale = this.scale * factor;
-        const MIN_SCALE = 0.5;
-        const MAX_SCALE = 4.0;
+        newScale = Math.min(Math.max(newScale, 0.5), 4.0);
 
-        if (newScale < MIN_SCALE) newScale = MIN_SCALE;
-        if (newScale > MAX_SCALE) newScale = MAX_SCALE;
         this.scale = newScale;
-
         this.offsetX = mouseX - worldX * this.scale;
         this.offsetY = mouseY - worldY * this.scale;
 
         this.clearCanvas();
         this.onZoomChange?.(this.scale);
-
     };
 
     resetZoom() {
@@ -265,19 +270,17 @@ export class Game {
         const worldY = (canvasCenterY - this.offsetY) / this.scale;
 
         this.scale = 1;
-
         this.offsetX = canvasCenterX - worldX * this.scale;
         this.offsetY = canvasCenterY - worldY * this.scale;
 
         this.clearCanvas();
         this.onZoomChange?.(this.scale);
-
     }
 
     initMouseHandlers() {
-        this.canvas.addEventListener("mousedown", this.mouseDownHandler);
-        this.canvas.addEventListener("mouseup", this.mouseUpHandler);
-        this.canvas.addEventListener("mousemove", this.mouseMoveHandler);
+        window.addEventListener("mousedown", this.mouseDownHandler);
+        window.addEventListener("mouseup", this.mouseUpHandler);
+        window.addEventListener("mousemove", this.mouseMoveHandler);
         this.canvas.addEventListener("wheel", this.handleZoom);
     }
 
@@ -286,41 +289,13 @@ export class Game {
             if (e.ctrlKey && (e.key === "=" || e.key === "+" || e.key === "-")) {
                 e.preventDefault();
 
-                const zoomFactor = 1.1;
-                let factor = 1;
-
-                if (e.key === "=" || e.key === "+") {
-                    factor = zoomFactor;
-                } else if (e.key === "-") {
-                    factor = 1 / zoomFactor;
-                }
-
-                const canvasCenterX = this.canvas.width / 2;
-                const canvasCenterY = this.canvas.height / 2;
-
-                const worldX = (canvasCenterX - this.offsetX) / this.scale;
-                const worldY = (canvasCenterY - this.offsetY) / this.scale;
-
-                let newScale = this.scale * factor;
-                const MIN_SCALE = 0.5;
-                const MAX_SCALE = 4.0;
-
-                if (newScale < MIN_SCALE) newScale = MIN_SCALE;
-                if (newScale > MAX_SCALE) newScale = MAX_SCALE;
-
-                this.scale = newScale;
-                this.offsetX = canvasCenterX - worldX * this.scale;
-                this.offsetY = canvasCenterY - worldY * this.scale;
-
-                this.clearCanvas();
+                const factor = e.key === "-" ? 1 / 1.1 : 1.1;
+                this.applyZoom(factor);
             }
         };
 
         window.addEventListener("keydown", keyHandler);
-
-        return () => {
-            window.removeEventListener("keydown", keyHandler);
-        };
+        return () => window.removeEventListener("keydown", keyHandler);
     }
 
     zoomIn() {
@@ -339,10 +314,7 @@ export class Game {
         const worldY = (canvasCenterY - this.offsetY) / this.scale;
 
         let newScale = this.scale * factor;
-        const MIN_SCALE = 0.5;
-        const MAX_SCALE = 4;
-
-        newScale = Math.min(Math.max(newScale, MIN_SCALE), MAX_SCALE);
+        newScale = Math.min(Math.max(newScale, 0.5), 4.0);
 
         this.scale = newScale;
         this.offsetX = canvasCenterX - worldX * this.scale;
@@ -357,9 +329,7 @@ export class Game {
     getShapes() { return this.existingShapes; }
 
     getDrawnBounds() {
-        if (this.existingShapes.length === 0) {
-            return null;
-        }
+        if (this.existingShapes.length === 0) return null;
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
@@ -385,8 +355,4 @@ export class Game {
 
         return { minX, minY, maxX, maxY };
     }
-
-
-
-
 }
